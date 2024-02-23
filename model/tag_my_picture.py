@@ -97,8 +97,13 @@ class ImageTagger:
                 cmdline=cmdline+" -XMP-digiKam:TagsList-="+digiKam_label+" -XMP-digiKam:TagsList+="+digiKam_label    
 
         if cmdline!="":
+            # Get the directory path of the current script (model code)
+            script_directory = os.path.dirname(os.path.abspath(__file__))
+            exiftool_path = os.path.join(script_directory, 'exiftool.exe')
+            
             # Note: I was having issues with spaces in filepaths using the previous method, hence updated to use subprocess to send the command
-            run('exiftool -r -overwrite_original'+cmdline+' "'+photo+'"', check=True)
+            print(exiftool_path+' -r -overwrite_original'+cmdline+' "'+photo+'"')
+            run(exiftool_path+' -r -overwrite_original'+cmdline+' "'+photo+'"', check=True)
 
     def get_image_tags(self, photo):
         print("The image received by the model is", photo)
@@ -148,9 +153,6 @@ class ImageTagger:
         self.labelDatabase.append(labelArr)
         
         return {"individual_labels": labels_final, "digikam_labels": labels_digikam_final}
-    
-    def write_to_metadata(self, labels_final, labels_digikam_final, img_path): # TODO: OBSOLETE??
-        self.write_tags(labels_final, labels_digikam_final, img_path)
         
     def save_tags_to_file(self):
         self.save_tags(self.labelDatabase)

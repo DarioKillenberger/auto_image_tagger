@@ -1,7 +1,8 @@
-from tkinter import filedialog
+from tkinter import BooleanVar
 from model.tag_my_picture import ImageTagger
 from view.main import View
 from PIL import Image, ImageTk, ImageOps
+import threading
 
 class ImgProcessController():  
     
@@ -10,7 +11,7 @@ class ImgProcessController():
         self.view = view
         self.frame = self.view.frames["imgProcessPage"]
         self.start_frame = self.view.frames["startPage"]
-        self.user_selection = ""
+        self.approve_all = BooleanVar()
         
         self.curr_tags = ""
         self.img_folder = ""
@@ -19,19 +20,18 @@ class ImgProcessController():
         self.curr_index = 0
     
         self.frame.cancel_button.config(command=self.cancel)
-        # self.frame.analyse_button.config(command=self.startImageProcessing)
-        # self.frame.settings_button.config(command=self.settings)
         self.frame.bind("<Configure>", lambda e: self.window_resize())
-        self.start_frame.analyse_button.bind("<Button-1>", lambda e: self.process_image())
-        self.frame.approve_button.bind("<Button-1>", lambda e: self.write_to_metadata())
+        self.start_frame.analyse_button.bind("<Button-1>", lambda e: threading.Thread(target=self.process_image).start())
+        self.frame.approve_button.bind("<Button-1>", lambda e: self.controll_process_loop())
+        self.frame.approve_all_checkbox.config(variable = self.approve_all)
         self.frame.skip_button.bind("<Button-1>", lambda e: self.next_image())
-        # self.start_frame.analyse_button.config(command=self.settings)
+      
 
-        
     def cancel(self):
         # code for the main function
         self.curr_image = ""
         self.curr_tags = ""
+        self.approve_all.set(False)
         self.update_tag_label()
         self.view.switch("startPage")
     
@@ -50,6 +50,21 @@ class ImgProcessController():
             self.frame.image=resized_img #need to keep the reference of image to avoid garbage collection !?!?!?
             self.frame.tag_label.config(wraplength=self.frame.winfo_width()-80)
             self.frame.update()
+        
+    def controll_process_loop(self):
+        print("controll process loop started, approve_all checkbox is ", self.approve_all.get())
+        print("Self.curr_image is: ",  self.curr_image)
+        if self.approve_all.get() == True:
+            for index, image in enumerate(self.images):
+                if self.approve_all.get() != True:
+                    break
+                else:
+                    print("controll process loop approved ran")
+                    self.curr_index = index
+                    self.process_image()
+                    self.write_to_metadata()
+        else:
+            self.write_to_metadata()
         
     def process_image(self):
         if self.model.get_directory() == "":
@@ -81,6 +96,7 @@ class ImgProcessController():
     
     def write_to_metadata(self):
         if self.curr_image != "" and self.curr_tags != "":
+            print("The information being passed in the write_to_metadata method is: ", self.curr_tags["individual_labels"], self.curr_tags["digikam_labels"], self.curr_image)
             self.model.write_tags(self.curr_tags["individual_labels"], self.curr_tags["digikam_labels"], self.curr_image)
             self.next_image()
                 
@@ -89,10 +105,9 @@ class ImgProcessController():
             self.curr_index += 1
             self.curr_tags = ""
             self.update_tag_label()
-            self.process_image()
+            threading.Thread(target=self.process_image).start()
         else:
             print("Completed. All images processed")
-    
         
         
     #     for index, photo in enumerate(files):

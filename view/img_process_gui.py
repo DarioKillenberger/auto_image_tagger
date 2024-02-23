@@ -27,7 +27,7 @@ class ImgProcessGUI(Frame):
                               justify="left")
         self.label.grid(row=2, column=1, padx=4, pady=10, sticky="NESW")
         self.approve_all_checkbox = ttk.Checkbutton(self)
-        self.approve_all_checkbox.grid(row=2, column=2, padx=4, pady=10, sticky="NESW")
+        self.approve_all_checkbox.grid(row=2, column=2, ipady=2, ipadx=2, padx=4, pady=10, sticky="NESW")
         
          # Approve writing to metadata Button
         self.approve_button = ttk.Button(self, text="Write to metadata")
