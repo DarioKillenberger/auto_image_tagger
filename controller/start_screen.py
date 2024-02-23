@@ -11,26 +11,17 @@ class StartScreenController():
         self.img_folder = ""
         
         self.frame.choose_button.config(command=self.choose_folder)
-        self.frame.analyse_button.config(command=self.startImageProcessing)
         self.frame.settings_button.config(command=self.settings)
         self.frame.bind("<Configure>", lambda e: self.window_resize())
         print("ran start screen controller")
         self.view.switch("startPage")
-    
-    def startImageProcessing(self):
-        # code for the main function
-        print("processing image!?!?!?!?!")
-    
-        if self.model.get_directory() == "":
-            print("please select an image folder first!!") # Make this a hidden label which becomes visible, just above the process screen button
-        else:
-            self.view.switch("imgProcessPage")
-            
+        
+        # Note: The 'Start Analysing Images' button is handled by the img_process controller, as it starts that controller's logic
         
     def choose_folder(self):
         folder_selected = filedialog.askdirectory()
         self.model.set_directory(folder_selected)
-        self.frame.folder_label.config(text=self.img_folder)
+        self.frame.folder_label.config(text=folder_selected)
         
     def settings(self):
         print("Settings...")

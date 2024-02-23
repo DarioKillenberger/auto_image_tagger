@@ -27,7 +27,7 @@ class ImageTagger:
     def get_directory(self):
         return self.directory_path
 
-    def limit_img_size(img_filename, img_target_filename, target_filesize, tolerance=5):
+    def limit_img_size(self, img_filename, img_target_filename, target_filesize, tolerance=5):
         # code from: https://stackoverflow.com/questions/52940369/is-it-possible-to-resize-an-image-by-its-bytes-rather-than-width-and-height
         img = img_orig = Image.open(img_filename)
         # resize image to be maximum 10000 pixels, to comply with aws pixel limits
@@ -70,7 +70,7 @@ class ImageTagger:
         else:
             return photo
 
-    def save_tags(wortliste):
+    def save_tags(self, wortliste):
         with open(tags_filename, "w") as f:
             for tags in wortliste:
                 tag_row = ""
@@ -86,7 +86,7 @@ class ImageTagger:
         return files
 
     # call exiftool to add the tags to metadata
-    def write_tags(labels_final, labels_digikam_final, photo):
+    def write_tags(self, labels_final, labels_digikam_final, photo):
         cmdline=""
         for label in set(labels_final):
             # add commands to add all tags (parent and tag) to the IPTC 'Keywords' and XMP 'Subject' fields
@@ -101,7 +101,7 @@ class ImageTagger:
             run('exiftool -r -overwrite_original'+cmdline+' "'+photo+'"', check=True)
 
     def get_image_tags(self, photo):
-        
+        print("The image received by the model is", photo)
         # Init
         client=boto3.client('rekognition')
         labels_final = []
@@ -149,7 +149,7 @@ class ImageTagger:
         
         return {"individual_labels": labels_final, "digikam_labels": labels_digikam_final}
     
-    def write_to_metadata(self, labels_final, labels_digikam_final, img_path):
+    def write_to_metadata(self, labels_final, labels_digikam_final, img_path): # TODO: OBSOLETE??
         self.write_tags(labels_final, labels_digikam_final, img_path)
         
     def save_tags_to_file(self):
