@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, Frame
+from tkinter import ttk, Frame, messagebox
 
 class StartPageGUI(Frame):
     def __init__(self, *args, **kwargs):
@@ -32,3 +32,6 @@ class StartPageGUI(Frame):
         # Settings Button
         self.settings_button = ttk.Button(self, text="Settings")
         self.settings_button.grid(row=2, column=2, ipady=10, ipadx=10, pady=10, sticky="SE")
+        
+    def create_popup(self, title, contents):
+        messagebox.showwarning(title=title, message=contents)

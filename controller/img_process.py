@@ -11,7 +11,8 @@ class ImgProcessController():
         self.view = view
         self.frame = self.view.frames["imgProcessPage"]
         self.start_frame = self.view.frames["startPage"]
-        self.approve_all = BooleanVar()
+        self.write_all = BooleanVar()
+        self.always_get_tags = BooleanVar()
         
         self.curr_tags = ""
         self.img_folder = ""
@@ -23,15 +24,16 @@ class ImgProcessController():
         self.frame.bind("<Configure>", lambda e: self.window_resize())
         self.start_frame.analyse_button.bind("<Button-1>", lambda e: threading.Thread(target=self.process_image).start())
         self.frame.approve_button.bind("<Button-1>", lambda e: self.controll_process_loop())
-        self.frame.approve_all_checkbox.config(variable = self.approve_all)
-        self.frame.skip_button.bind("<Button-1>", lambda e: self.next_image())
+        self.frame.approve_all_checkbox.config(variable = self.write_all)
+        self.frame.get_all_tags_checkbox.config(variable = self.always_get_tags)
+        self.frame.skip_button.bind("<Button-1>", lambda e: self.skip_image())
       
 
     def cancel(self):
         # code for the main function
         self.curr_image = ""
         self.curr_tags = ""
-        self.approve_all.set(False)
+        self.write_all.set(False)
         self.update_tag_label()
         self.view.switch("startPage")
     
@@ -52,11 +54,11 @@ class ImgProcessController():
             self.frame.update()
         
     def controll_process_loop(self):
-        print("controll process loop started, approve_all checkbox is ", self.approve_all.get())
+        print("controll process loop started, write_all checkbox is ", self.write_all.get())
         print("Self.curr_image is: ",  self.curr_image)
-        if self.approve_all.get() == True:
+        if self.write_all.get() == True:
             for index, image in enumerate(self.images):
-                if self.approve_all.get() != True:
+                if self.write_all.get() != True:
                     break
                 else:
                     print("controll process loop approved ran")
@@ -69,10 +71,11 @@ class ImgProcessController():
     def process_image(self):
         if self.model.get_directory() == "":
             print("please select an image folder first!!") # Make this a hidden label which becomes visible, just above the process screen button
+            self.start_frame.create_popup("Error", "Please select an image folder first")
         else:
             print("process_images method has indeed been called!!!!!!!!!!!")
             self.view.switch("imgProcessPage")
-            self.images = self.model.read_filelist()
+            self.images = self.model.read_filelist() #TODO: Don't read this each time???
             self.frame.progress_label.config(text="Image " + str(self.curr_index+1) + "/" + str(len(self.images)))
             self.curr_image = self.images[self.curr_index]
             self.set_resized_img()
@@ -108,6 +111,11 @@ class ImgProcessController():
             threading.Thread(target=self.process_image).start()
         else:
             print("Completed. All images processed")
+            self.start_frame.create_popup("Completed", "All images have been processed")
+            
+    def skip_image(self):
+        self.model.set_runState(False)
+        self.next_image()
         
         
     #     for index, photo in enumerate(files):
@@ -116,7 +124,7 @@ class ImgProcessController():
     #         print(photo)
     
         # verify user wants to write the tags to the image
-        # if approve_all != True:
+        # if write_all != True:
         #     print('Write labels to image metadata?')
         #     print('Options:\ny - Approve writing tags to this single image (will ask for confirmation each time)\nya - Approve writing tags to all images (will not ask for confirmation for future images)\nn - Do not write tags to this image\nc - quit script')
         #     print('Please enter an option: ', end="")
@@ -126,7 +134,7 @@ class ImgProcessController():
         #             self.write_tags(labels_final, labels_digikam_final, photo)
         #         case "ya":
         #             self.write_tags(labels_final, labels_digikam_final, photo)
-        #             approve_all = True
+        #             write_all = True
         #         case "n":
         #             print("Tags were not written to metadata for this image")
         #         case "c":
