@@ -37,12 +37,12 @@ class ImgProcessGUI(Frame):
         self.label_metadata = tk.Label(self, text="Always write to metadata",
                               justify="left")
         self.label_metadata.grid(row=2, rowspan=2, column=1, padx=4, pady=10, sticky="S")
-        self.approve_all_checkbox = ttk.Checkbutton(self)
-        self.approve_all_checkbox.grid(row=2, rowspan=2, column=2, ipady=2, ipadx=2, padx=4, pady=10, sticky="S")
+        self.write_all_checkbox = ttk.Checkbutton(self)
+        self.write_all_checkbox.grid(row=2, rowspan=2, column=2, ipady=2, ipadx=2, padx=4, pady=10, sticky="S")
         
          # Approve writing to metadata Button
-        self.approve_button = ttk.Button(self, text="Write to metadata")
-        self.approve_button.grid(row=2, rowspan=2, column=4, ipady=10, ipadx=10, padx=4, pady=10, sticky="NESW")
+        self.write_metadata_button = ttk.Button(self, text="Write to metadata")
+        self.write_metadata_button.grid(row=2, rowspan=2, column=4, ipady=10, ipadx=10, padx=4, pady=10, sticky="NESW")
         
          # Skip Image Button
         self.skip_button = ttk.Button(self, text="Skip image")

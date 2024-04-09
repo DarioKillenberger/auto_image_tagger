@@ -11,8 +11,12 @@ class ImgProcessController():
         self.view = view
         self.frame = self.view.frames["imgProcessPage"]
         self.start_frame = self.view.frames["startPage"]
+        
         self.write_all = BooleanVar()
         self.always_get_tags = BooleanVar()
+        
+        self.get_tags_temp = BooleanVar()
+        self.write_tags_temp = BooleanVar()
         
         self.curr_tags = ""
         self.img_folder = ""
@@ -22,10 +26,12 @@ class ImgProcessController():
     
         self.frame.cancel_button.config(command=self.cancel)
         self.frame.bind("<Configure>", lambda e: self.window_resize())
-        self.start_frame.analyse_button.bind("<Button-1>", lambda e: threading.Thread(target=self.process_image).start())
-        self.frame.approve_button.bind("<Button-1>", lambda e: self.controll_process_loop())
-        self.frame.approve_all_checkbox.config(variable = self.write_all)
+        self.start_frame.analyse_button.bind("<Button-1>", lambda e: threading.Thread(target=self.control_process_loop).start())
+        
+        self.frame.write_all_checkbox.config(variable = self.write_all)
         self.frame.get_all_tags_checkbox.config(variable = self.always_get_tags)
+        self.frame.get_tags_button.bind("<Button-1>", lambda e: self.handle_tags_button())
+        self.frame.write_metadata_button.bind("<Button-1>", lambda e: self.handle_metadata_button())
         self.frame.skip_button.bind("<Button-1>", lambda e: self.skip_image())
       
 
@@ -41,10 +47,9 @@ class ImgProcessController():
         self.set_resized_img() # note: likely not very efficient!!!
         self.frame.tag_label.config(wraplength=self.frame.winfo_width()-80)
 
-        
     def set_resized_img(self):
         if self.curr_image != "":
-            self.curr_tags = ""
+            # self.curr_tags = ""
             resized_img = ImageOps.contain(Image.open(self.curr_image), (self.frame.winfo_width(), self.frame.winfo_height()))
             resized_img = ImageTk.PhotoImage(resized_img)
 
@@ -53,24 +58,73 @@ class ImgProcessController():
             self.frame.tag_label.config(wraplength=self.frame.winfo_width()-80)
             self.frame.update()
         
-    def controll_process_loop(self):
-        print("controll process loop started, write_all checkbox is ", self.write_all.get())
-        print("Self.curr_image is: ",  self.curr_image)
-        if self.write_all.get() == True:
+    def handle_tags_button(self):
+        self.get_tags_temp = True
+        self.control_process_loop()
+    
+    def handle_metadata_button(self):
+        self.write_tags_temp = True
+        self.control_process_loop()
+    
+    # Threading helper function
+    def run_in_thread(self, func):
+        thread = threading.Thread(target=func)
+        thread.start()
+        thread.join()
+        
+    
+    # Main control loop. Determines what gets run based on the checkboxes/buttons pressed
+    def control_process_loop(self):
+        self.process_image()
+        
+        if self.write_all.get() == True and self.always_get_tags.get() == True:
             for index, image in enumerate(self.images):
-                if self.write_all.get() != True:
+                if self.write_all.get() != True or self.always_get_tags.get() != True:
                     break
                 else:
-                    print("controll process loop approved ran")
+                    print("control process loop approved ran")
                     self.curr_index = index
-                    self.process_image()
-                    self.write_to_metadata()
-        else:
-            self.write_to_metadata()
+                    
+                    self.run_in_thread(self.get_image_tags)
+                    self.run_in_thread(self.write_to_metadata)
+                    self.next_image()
         
+        elif (self.always_get_tags.get() == True or self.get_tags_temp == True) and (self.write_all.get() == True or self.write_tags_temp == True):
+            self.get_image_tags()
+            self.write_to_metadata()
+            self.write_tags_temp = False
+            self.get_tags_temp == False
+            self.next_image()
+            
+        else:
+            if (self.always_get_tags.get() == True or self.get_tags_temp == True) and self.curr_tags == "":
+                self.get_image_tags()
+                self.get_tags_temp = False
+            
+            if (self.write_all.get() == True or self.write_tags_temp == True) and self.curr_tags != "":
+                self.write_to_metadata()
+                self.write_tags_temp = False
+                self.next_image()
+            elif self.write_tags_temp == True:
+                self.start_frame.create_popup("Error", "Please generate tags first 1")
+                self.write_tags_temp = False
+    
+    # Switches to next image and calls the control_process_loop again
+    def next_image(self):
+        if self.curr_index < len(self.images)-1:
+            self.curr_index += 1
+            self.curr_tags = ""
+            self.update_tag_label()
+            threading.Thread(target=self.process_image).start()
+            
+        else:
+            print("Completed. All images processed")
+            self.start_frame.create_popup("Completed", "All images have been processed")
+            
+    
+    # Read and resize the image for viewing in the application
     def process_image(self):
         if self.model.get_directory() == "":
-            print("please select an image folder first!!") # Make this a hidden label which becomes visible, just above the process screen button
             self.start_frame.create_popup("Error", "Please select an image folder first")
         else:
             print("process_images method has indeed been called!!!!!!!!!!!")
@@ -80,9 +134,7 @@ class ImgProcessController():
             self.curr_image = self.images[self.curr_index]
             self.set_resized_img()
             
-            self.curr_tags = self.generate_tags(self.images[self.curr_index])
-            self.update_tag_label()
-            
+    # Update the image label tag in the UI to show the currently generated tags
     def update_tag_label(self):
         if self.curr_tags == "":
             self.frame.tag_label.config(text="")
@@ -93,25 +145,23 @@ class ImgProcessController():
     # local copy (in the controller) of the tagslist everytime the user makes an edit. When writing metadata to file, take the user edited code (do some basic
     # error checking before writing ie. no spaces within tags!?)
             
-            
+    # Gets image tags and calls the update_tag_label method to display them
+    def get_image_tags(self):
+        if self.curr_tags == "":
+            self.curr_tags = self.generate_tags(self.curr_image)
+            self.update_tag_label()
+    
+    # Calls the model to write get the tags from the Amazon Rekognition API
     def generate_tags(self, img_path):
         return self.model.get_image_tags(img_path)
     
+    # Calls the model to write the tags to the image metadata
     def write_to_metadata(self):
         if self.curr_image != "" and self.curr_tags != "":
             print("The information being passed in the write_to_metadata method is: ", self.curr_tags["individual_labels"], self.curr_tags["digikam_labels"], self.curr_image)
             self.model.write_tags(self.curr_tags["individual_labels"], self.curr_tags["digikam_labels"], self.curr_image)
-            self.next_image()
-                
-    def next_image(self):
-        if self.curr_index < len(self.images)-1:
-            self.curr_index += 1
-            self.curr_tags = ""
-            self.update_tag_label()
-            threading.Thread(target=self.process_image).start()
-        else:
-            print("Completed. All images processed")
-            self.start_frame.create_popup("Completed", "All images have been processed")
+        elif self.curr_tags == "":
+            self.start_frame.create_popup("Error", "Please generate tags first") 
             
     def skip_image(self):
         self.model.set_runState(False)
