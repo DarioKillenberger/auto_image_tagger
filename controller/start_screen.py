@@ -16,7 +16,7 @@ class StartScreenController():
         print("ran start screen controller")
         self.view.switch("startPage")
         
-        # Note: The 'Start Analysing Images' button is handled by the img_process controller, as it starts that controller's logic
+        # Note: The 'Start Analysing Images' button is handled by the img_process controller, as it starts that controller's logic :|
         
     def choose_folder(self):
         folder_selected = filedialog.askdirectory()

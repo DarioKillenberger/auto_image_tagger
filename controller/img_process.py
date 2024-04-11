@@ -6,6 +6,7 @@ import threading
 
 class ImgProcessController():  
     
+    # init method - Mainly setting up class variables
     def __init__(self, model: ImageTagger, view: View) -> None:
         self.model = model # should brackets be here to initalize as object?
         self.view = view
@@ -34,19 +35,22 @@ class ImgProcessController():
         self.frame.write_metadata_button.bind("<Button-1>", lambda e: self.handle_metadata_button())
         self.frame.skip_button.bind("<Button-1>", lambda e: self.skip_image())
       
-
+    # TODO: Rename to abort - Aborts the image processing and returns to the start page
     def cancel(self):
-        # code for the main function
         self.curr_image = ""
         self.curr_tags = ""
         self.write_all.set(False)
         self.update_tag_label()
+        self.model.set_runState(False)
         self.view.switch("startPage")
     
+    # NOT SURE WHY THIS EXISTS. SHOULD JUST COMBINE WITH set_resized_image?
+    # Also, I've commented out line 2, make sure this is correct (this line is duplic in set_resized_img)
     def window_resize(self):
         self.set_resized_img() # note: likely not very efficient!!!
-        self.frame.tag_label.config(wraplength=self.frame.winfo_width()-80)
+        # self.frame.tag_label.config(wraplength=self.frame.winfo_width()-80)
 
+    # Updates the image and tags fields to match the current window size
     def set_resized_img(self):
         if self.curr_image != "":
             # self.curr_tags = ""
@@ -57,13 +61,18 @@ class ImgProcessController():
             self.frame.image=resized_img #need to keep the reference of image to avoid garbage collection !?!?!?
             self.frame.tag_label.config(wraplength=self.frame.winfo_width()-80)
             self.frame.update()
-        
+    
+    ## Methods to handle respective button clicks
     def handle_tags_button(self):
         self.get_tags_temp = True
         self.control_process_loop()
     
     def handle_metadata_button(self):
         self.write_tags_temp = True
+        self.control_process_loop()
+
+    def handle_analyse_button(self):
+        self.process_image()
         self.control_process_loop()
     
     # Threading helper function
@@ -75,7 +84,6 @@ class ImgProcessController():
     
     # Main control loop. Determines what gets run based on the checkboxes/buttons pressed
     def control_process_loop(self):
-        self.process_image()
         
         if self.write_all.get() == True and self.always_get_tags.get() == True:
             for index, image in enumerate(self.images):
@@ -90,15 +98,15 @@ class ImgProcessController():
                     self.next_image()
         
         elif (self.always_get_tags.get() == True or self.get_tags_temp == True) and (self.write_all.get() == True or self.write_tags_temp == True):
-            self.get_image_tags()
-            self.write_to_metadata()
-            self.write_tags_temp = False
+            self.run_in_thread(self.get_image_tags)
+            self.run_in_thread(self.write_to_metadata)
             self.get_tags_temp == False
+            self.write_tags_temp = False
             self.next_image()
             
         else:
             if (self.always_get_tags.get() == True or self.get_tags_temp == True) and self.curr_tags == "":
-                self.get_image_tags()
+                self.run_in_thread(self.get_image_tags)
                 self.get_tags_temp = False
             
             if (self.write_all.get() == True or self.write_tags_temp == True) and self.curr_tags != "":
@@ -109,7 +117,7 @@ class ImgProcessController():
                 self.start_frame.create_popup("Error", "Please generate tags first 1")
                 self.write_tags_temp = False
     
-    # Switches to next image and calls the control_process_loop again
+    # Switches to next image
     def next_image(self):
         if self.curr_index < len(self.images)-1:
             self.curr_index += 1
@@ -163,31 +171,8 @@ class ImgProcessController():
         elif self.curr_tags == "":
             self.start_frame.create_popup("Error", "Please generate tags first") 
             
+    # Skip the image, attempt to cancel getting tags if the AWS api has not already been called (basically, if the image is still being resized/downscaled)
     def skip_image(self):
         self.model.set_runState(False)
         self.next_image()
         
-        
-    #     for index, photo in enumerate(files):
-    #         print()
-    #         print("processing image", index+1, "out of", len(files))
-    #         print(photo)
-    
-        # verify user wants to write the tags to the image
-        # if write_all != True:
-        #     print('Write labels to image metadata?')
-        #     print('Options:\ny - Approve writing tags to this single image (will ask for confirmation each time)\nya - Approve writing tags to all images (will not ask for confirmation for future images)\nn - Do not write tags to this image\nc - quit script')
-        #     print('Please enter an option: ', end="")
-        #     x = input()
-        #     match x:
-        #         case "y":
-        #             self.write_tags(labels_final, labels_digikam_final, photo)
-        #         case "ya":
-        #             self.write_tags(labels_final, labels_digikam_final, photo)
-        #             write_all = True
-        #         case "n":
-        #             print("Tags were not written to metadata for this image")
-        #         case "c":
-        #             break
-        # else:
-        #     self.write_tags(labels_final, labels_digikam_final, photo)
